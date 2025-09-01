@@ -12,7 +12,7 @@
 
 Img2CAD is a novel framework for reverse engineering 3D CAD models from single-view images. Our approach conditionally factorizes the complex image-to-CAD task into two manageable sub-problems:
 
-1. **Discrete Structure Prediction**: Using GPT-4V to predict the global discrete CAD command structure with semantic information
+1. **Discrete Structure Prediction**: Using finetuned Llama to predict the global discrete CAD command structure with semantic information
 2. **Continuous Parameter Prediction**: Using TrAssembler, a transformer-based network, to predict continuous parameter values conditioned on the discrete structure
 
 ![Img2CAD Framework](docs/img2cad_framework.png)
