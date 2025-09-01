@@ -1,0 +1,54 @@
+# TrAssembler Training Configuration
+
+# Dataset configuration
+category: chair  # Options: chair, table, storagefurniture
+
+# Training configuration
+batch_size: 8
+max_epochs: 300
+lr: 3e-4
+weight_decay: 1e-2
+seed: 42
+
+# Model configuration
+network:
+  embed_dim: 64
+  num_heads: 8
+  dropout: 0.
+
+# Gaussian Mixture Flow configuration
+gm:
+  shift: 0.5
+
+# Decoder configuration
+decoder_num_tokens: 1024
+
+# Training setup
+use_gpu: true
+gradient_clip_val: 1.0
+precision: 32
+
+# Validation configuration
+limit_val_batches: 5
+check_val_every_n_epoch: 1
+
+# Checkpointing
+save_every_n_epochs: 3
+
+# Logging
+wandb: false  # Set to true to use Weights & Biases
+log_every_n_steps: 50
+
+# Paths (relative to project root)
+data_root: data
+raw_data_root: data/raw_annotated
+
+# Resume training (optional)
+# ckpt: path/to/checkpoint.ckpt
+
+# Hydra configuration
+hydra:
+  run:
+    dir: data/ckpts/trassembler/${category}/${now:%Y-%m-%d_%H-%M-%S}
+  job:
+    chdir: false

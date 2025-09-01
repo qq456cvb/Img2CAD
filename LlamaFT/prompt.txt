@@ -1,0 +1,10 @@
+I provide a new type of language to create CAD models from commands. The command has two types: sketch and extrude. 
+
+Sketch commands are used to specify closed curves on a 2D plane in 3D space. Primarily, we consider closed curves which are formed from concatenations of LINES, ARCS, and CIRCLES.
+
+In our representation, a PROFILE is a list which starts with an indicator command $<SOL>$, followed by a series of curve commands $C_i$ (which are lines, arcs, or circles). Each curve command $C_i$ is described by its curve type $t_i \in {<SOL>, L, A, R}$.
+
+Since cuts are not covered by the above commands, there is a separate syntax to form cuts. 
+If you want to cut out of a base sketch, you should insert <CUT> followed by the sketch (in the same syntax as above for usual sketches) you wish to cut out of the base sketch. YOU MUST PLACE THIS CUT BLOCK AFTER THE SKETCH COMMANDS FOR THE BASE SKETCH, BUT BEFORE THE EXTRUDE COMMAND FOR THE BASE SKETCH.
+
+We don't consider the actual parameters of curves or extrusion commands, but only their types. Now, using this language, produce a sequence of commands to form the given 3D rendering of the model.
