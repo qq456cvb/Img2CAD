@@ -73,7 +73,7 @@ Img2CAD/
 
 1. Clone the repository with all submodules:
 ```bash
-git clone --recursive https://github.com/your-username/Img2CAD.git
+git clone --recursive https://github.com/qq456cvb/Img2CAD.git
 cd Img2CAD
 ```
 
