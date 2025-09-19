@@ -41,6 +41,7 @@ Img2CAD/
 │   │   ├── table/             # Table category data
 │   │   └── storagefurniture/  # Storage furniture data
 │   ├── blender_renderings/    # Rendered images (.png files)
+│   ├── sym_labels/            # Per-object symmetry labels (text files)
 │   ├── llamaft_gt_labels/     # Ground truth labels for LlamaFT training
 │   │   ├── chair/             # Text labels for chair category
 │   │   ├── table/             # Text labels for table category
@@ -103,7 +104,8 @@ pip install -r requirements.txt
 2. Download rendered images to `data/blender_renderings/`
 3. Download ground truth labels for LlamaFT training to `data/llamaft_gt_labels/`
 4. Download category-specific JSON files (part name mappings and statistics)
-5. Ensure train/test splits are in `data/splits/`
+5. Download symmetry labels for each object to `data/sym_labels/`
+6. Ensure train/test splits are in `data/splits/`
 
 All datasets are available at this [Google Drive link](https://drive.google.com/drive/folders/1HZYa5SF5Wt4f3iq6zNFaCXHUeKuF2p-D?usp=sharing).
 
@@ -120,6 +122,9 @@ data/
 │   └── storagefurniture/
 ├── blender_renderings/
 │   ├── 12345.png
+│   └── ...
+├── sym_labels/
+│   ├── 12345.txt              # 1=rotational, 2=reflection, 3=no_symmetry
 │   └── ...
 ├── llamaft_gt_labels/
 │   ├── chair/

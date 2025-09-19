@@ -28,7 +28,7 @@ import argparse
 from utils.misc import render_nvdiffrast_rgb
 from utils.diffsdf import param2mesh_torch, param2sdf
 import logging
-
+from scipy.spatial.transform import Rotation
 
 torch.set_grad_enabled(False)
 # Set the trimesh logger to suppress everything below ERROR
@@ -137,8 +137,11 @@ def compute_cd(mesh1, mesh2, normalize=True):
     return cd
 
 
-def symmetry_opt(gmflow, x_t, t, cmd, cmd_mask, args_mask, gt_arc_arg, model: GMFlowModel):
+def symmetry_opt(gmflow, x_t, t, cmd, cmd_mask, args_mask, gt_arc_arg, model: GMFlowModel, sym_type: str):
     # print(t)
+    
+    if sym_type == 'no_symmetry':
+        return x_t
     
     num_iter = int(np.sqrt(1000 - t.item())) - 20
     if num_iter <= 0:
@@ -203,16 +206,27 @@ def symmetry_opt(gmflow, x_t, t, cmd, cmd_mask, args_mask, gt_arc_arg, model: GM
             # Sample query points with x < 0 within the bounding box
             query_points = torch.rand((1024, 3), device='cuda') * (bbox_max - bbox_min) + bbox_min
             query_points = query_points[query_points[:, 0] < 0]  # Keep only points with x < 0
-
-            # Reflect the query points along the x=0 plane
-            reflected_points = query_points.clone()
-            reflected_points = reflected_points * torch.tensor([-1.,1,1], device=reflected_points.device)
             
             sdf_original = param2sdf([None] * P, part_vecs, size, loc, query_points, rad=False, verts=verts, faces=faces)
-            sdf_reflected = param2sdf([None] * P, part_vecs, size, loc, reflected_points, rad=False, verts=verts, faces=faces)
-
+            if sym_type == 'reflection':
+                            # Reflect the query points along the x=0 plane
+                reflected_points = query_points.clone()
+                reflected_points = reflected_points * torch.tensor([-1.,1,1], device=reflected_points.device)
+                sdf_reflected = param2sdf([None] * P, part_vecs, size, loc, reflected_points, rad=False, verts=verts, faces=faces)
+                symmetry_loss = torch.mean(torch.abs(sdf_original - sdf_reflected))
+            elif sym_type == 'rotational':
+                bins = 10
+                symmetry_loss = 0.
+                for i in range(bins):
+                    rot_around_y = Rotation.from_euler('y', 360 * i / bins, degrees=True).as_matrix()
+                    rotated_points = query_points.clone()
+                    rotated_points = (rotated_points @ rot_around_y.T).T
+                    sdf_reflected = param2sdf([None] * P, part_vecs, size, loc, rotated_points, rad=False, verts=verts, faces=faces)
+                    symmetry_loss += torch.mean(torch.abs(sdf_original - sdf_reflected))
+                symmetry_loss /= bins
+            else:
+                raise ValueError(f"Invalid symmetry type: {sym_type}")
             # Compute symmetry loss as the mean absolute difference between the two SDFs
-            symmetry_loss = torch.mean(torch.abs(sdf_original - sdf_reflected))
             # print(f"Iteration {iter}, Symmetry Loss: {symmetry_loss.item()}")
 
             # Backpropagation and optimization step
@@ -265,13 +279,14 @@ def step_callback(
         part_names=None,
         base_args: torch.Tensor = None,
         rgb_gt: np.ndarray = None,
+        sym_type: str = None,
     ):
     """Wrapper around symmetry_opt that optionally saves intermediate results per timestep.
 
     Saves to output_subdir/intermediate/step_XXXX/{intermediate.h5, intermediate.obj, intermediate.png}.
     """
     # Run the optimization step first
-    x_t_new = symmetry_opt(gmflow, x_t, t, cmd, cmd_mask, args_mask, gt_arc_arg, model)
+    x_t_new = symmetry_opt(gmflow, x_t, t, cmd, cmd_mask, args_mask, gt_arc_arg, model, sym_type)
 
     if not save_intermediate or output_subdir is None:
         return x_t_new
@@ -355,16 +370,18 @@ def get_clip_features(clip_model, texts, device):
 def main():
     """Main evaluation function."""
     parser = argparse.ArgumentParser(description="Evaluate TrAssembler model.")
-    parser.add_argument("--model_dir", type=str, default='ata/ckpts/trassembler/chair', help="Model directory.")
+    parser.add_argument("--model_dir", type=str, default='data/ckpts/trassembler/chair', help="Model directory.")
     parser.add_argument("--output_dir", type=str, default='data/output/trassembler_h5', help="Output directory.")
     parser.add_argument("--text_emb_retrieval", action='store_true', help="Use text embedding retrieval.")
     parser.add_argument("--data_root", type=str, default='data', help="Data root directory.")
     parser.add_argument("--skip_processed", action='store_true', help="Skip processed objects.")
+    parser.add_argument("--sym_labels_dir", type=str, default='data/sym_labels', help="Symmetry label directory.")
     parser.add_argument("--save_intermediate", action='store_true', help="Save intermediate step outputs (h5, obj, png) per timestep under out_dir/data_id/intermediate.")
     
     args = parser.parse_args()
     save_intermediate = args.save_intermediate
     skip_processed = args.skip_processed
+    sym_labels_dir = args.sym_labels_dir
     ckpt_path = Path(f'{args.model_dir}/checkpoints/last.ckpt')
     config = OmegaConf.load(os.path.join(args.model_dir, '.hydra/config.yaml'))
     model = GMFlowModel.load_from_checkpoint(ckpt_path,
@@ -400,8 +417,16 @@ def main():
     occs = []
     cds = []
     cnt = 0
+    
+    sym_label2type = {1: 'rotational', 2: 'reflection', 3: 'no_symmetry'}
     for data_id in tqdm(test_ids):
-
+        sym_label_path = f'{sym_labels_dir}/{data_id}.txt'
+        if not os.path.exists(sym_label_path):
+            print(f'{sym_label_path} not exists')
+            occs.append(0.)
+            continue
+        sym_label = open(sym_label_path).read().splitlines()[0]
+        sym_type = sym_label2type[int(sym_label)]
         # Prepare per-object output directory
         obj_out_dir = out_dir / f'{data_id}'
         obj_out_dir.mkdir(exist_ok=True, parents=True)
@@ -471,6 +496,7 @@ def main():
                 part_names=part_names,
                 base_args=batch['args'][0].clone().detach(),
                 rgb_gt=rgb_gt,
+                sym_type=sym_type,
             )
             pred_args = model.sample(batch, step_callback=step_cb)
         except Exception as e:
