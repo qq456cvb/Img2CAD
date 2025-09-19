@@ -1,12 +1,16 @@
-# Img2CAD: Reverse Engineering 3D CAD Models from Images
+# (SIGGRAPH Asia 2025) Img2CAD: Reverse Engineering 3D CAD Models from Images
 
 [![arXiv](https://img.shields.io/badge/arXiv-2408.01437-b31b1b.svg)](https://arxiv.org/abs/2408.01437)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+![Img2CAD Framework](teaser.gif)
+
 > **Img2CAD: Reverse Engineering 3D CAD Models from Images through VLM-Assisted Conditional Factorization**  
-> *Yang You, Mikaela Angelina Uy, Jiaqi Han, Rahul Thomas, Haotong Zhang, Suya You, Leonidas Guibas*  
-> Stanford University, Peking University, U.S. Army Research Lab
+> *Yang You, Mikaela Angelina Uy, Jiaqi Han, Rahul Thomas, Haotong Zhang, Yi Du, Hansheng Chen, Francis Engelmann, Suya You, Leonidas Guibas*  
+> Stanford University, NVIDIA, Peking University, DEVCOM Army Research Laboratory
+
+> Accepted to SIGGRAPH Asia 2025
 
 ## Overview
 
@@ -15,7 +19,7 @@ Img2CAD is a novel framework for reverse engineering 3D CAD models from single-v
 1. **Discrete Structure Prediction**: Using finetuned Llama to predict the global discrete CAD command structure with semantic information
 2. **Continuous Parameter Prediction**: Using TrAssembler, a transformer-based network, to predict continuous parameter values conditioned on the discrete structure
 
-![Img2CAD Framework](docs/img2cad_framework.png)
+
 
 ## 🏗️ Repository Structure
 
@@ -101,6 +105,8 @@ pip install -r requirements.txt
 4. Download category-specific JSON files (part name mappings and statistics)
 5. Ensure train/test splits are in `data/splits/`
 
+All datasets are available at this [Google Drive link](https://drive.google.com/drive/folders/1HZYa5SF5Wt4f3iq6zNFaCXHUeKuF2p-D?usp=sharing).
+
 Expected data structure:
 ```
 data/
@@ -159,10 +165,11 @@ python LlamaFT/infer.py --category chair --split test --out_dir data/output/llam
 
 ### Stage 2: Continuous Parameter Prediction with TrAssembler
 
-1. **Prepare the dataset**:
+1. **Prepare the dataset** (Optional):
 ```bash
 python TrAssembler/dataset.py  # This will create data/trassembler_data/{category}_pkl directories
 ```
+Or you can directly download our processed pickle data.
 
 2. **Train TrAssembler**:
 ```bash
@@ -175,7 +182,7 @@ python TrAssembler/train.py --category chair --batch_size 16 --max_epochs 150 --
 
 3. **Evaluate the model**:
 ```bash
-python TrAssembler/eval.py --logdir data/ckpts/trassembler/chair/2025-05-19_21-42-56 --text_emb_retrieval
+python TrAssembler/eval.py --model_dir data/ckpts/trassembler/chair --text_emb_retrieval
 ```
 
 ## 📊 Configuration
@@ -265,4 +272,4 @@ For questions or issues, please:
 
 - [Paper (arXiv)](https://arxiv.org/abs/2408.01437)
 - [Project Page](https://img2cad.github.io) (Coming Soon)
-- [Dataset](https://dataset.img2cad.github.io) (Contact authors for access)
+- [Dataset](https://drive.google.com/drive/folders/1HZYa5SF5Wt4f3iq6zNFaCXHUeKuF2p-D?usp=sharing)

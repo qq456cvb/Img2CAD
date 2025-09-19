@@ -250,6 +250,99 @@ def symmetry_opt(gmflow, x_t, t, cmd, cmd_mask, args_mask, gt_arc_arg, model: GM
     # print(x_t[0, p_indices, l_indices, 2])
     return rearrange(x_t, 'B P L N -> B N P L')
 
+
+def step_callback(
+        gmflow,
+        x_t,
+        t,
+        cmd,
+        cmd_mask,
+        args_mask,
+        gt_arc_arg,
+        model: GMFlowModel,
+        save_intermediate=False,
+        output_subdir: Path = None,
+        part_names=None,
+        base_args: torch.Tensor = None,
+        rgb_gt: np.ndarray = None,
+    ):
+    """Wrapper around symmetry_opt that optionally saves intermediate results per timestep.
+
+    Saves to output_subdir/intermediate/step_XXXX/{intermediate.h5, intermediate.obj, intermediate.png}.
+    """
+    # Run the optimization step first
+    x_t_new = symmetry_opt(gmflow, x_t, t, cmd, cmd_mask, args_mask, gt_arc_arg, model)
+
+    if not save_intermediate or output_subdir is None:
+        return x_t_new
+
+    try:
+        step_id = int(t.item()) if torch.is_tensor(t) else int(t)
+    except Exception:
+        step_id = 0
+
+    try:
+        inter_root = output_subdir / 'intermediate'
+        step_dir = inter_root / f'step_{step_id:04d}'
+        step_dir.mkdir(parents=True, exist_ok=True)
+
+        # Prepare current denormalized args for conversion to CAD vectors
+        x_denorm = rearrange(x_t_new.clone(), 'B N P L -> B P L N')
+        model.denormalize(x_denorm, args_mask)
+
+        # Merge with base args (keep non-predicted values from base)
+        if base_args is not None:
+            args_current = base_args.clone()
+            mask = args_mask[0] > 0
+            args_current[mask] = x_denorm[0][mask]
+        else:
+            args_current = x_denorm[0]
+
+        # Build CAD vectors
+        cad_vec = []
+        part_cad_vec_out = {}
+        # import pdb; pdb.set_trace()
+        _, P, L = cmd.shape
+        for p in range(P):
+            if cmd_mask[0][p][0] > 0:
+                part_vec = []
+                for l in range(L):
+                    if cmd_mask[0][p][l] > 0:
+                        arg = args_current[p][l].detach().cpu().numpy()
+                        cmd_type = int(cmd[0][p][l].item())
+                        if cmd_type == 1:
+                            arg[2] /= np.pi / 180.
+                            arg[3] = 1.0
+                        cad_vec.append(np.concatenate([np.array([cmd_type]), arg]))
+                        part_vec.append(cad_vec[-1])
+                if part_names is not None and p < len(part_names):
+                    part_cad_vec_out[part_names[p]] = np.array(part_vec)
+
+        cad_vec_np = np.array(cad_vec)
+
+        # Save h5
+        with h5py.File(str(step_dir / 'intermediate.h5'), 'w') as h5_out:
+            h5_out.create_dataset('vec', data=cad_vec_np)
+            for k in part_cad_vec_out.keys():
+                h5_out.create_dataset(k, data=part_cad_vec_out[k], dtype=float)
+
+        # Save obj and png
+        full_shape = vec2CADsolid(cad_vec_np, is_numerical=False)
+        obj_path = step_dir / 'intermediate.obj'
+        cad_to_obj(full_shape, str(obj_path))
+        if rgb_gt is not None:
+            rgb_pred = render_nvdiffrast_rgb(str(obj_path))
+            rgb = np.concatenate([rgb_gt, rgb_pred], axis=1)
+            cv2.imwrite(str(step_dir / 'intermediate.png'), rgb[..., ::-1])
+
+    except Exception as e:
+        # Never break sampling due to intermediate saving errors
+        print(f"Error saving intermediate: {e}")
+        import traceback
+        print(traceback.format_exc())
+
+    return x_t_new
+
 def get_clip_features(clip_model, texts, device):
     """Get CLIP text features for given texts."""
     text_tokens = clip.tokenize(texts).to(device)
@@ -262,14 +355,18 @@ def get_clip_features(clip_model, texts, device):
 def main():
     """Main evaluation function."""
     parser = argparse.ArgumentParser(description="Evaluate TrAssembler model.")
-    parser.add_argument("--logdir", type=str, required=True, help="Log directory.")
+    parser.add_argument("--model_dir", type=str, default='ata/ckpts/trassembler/chair', help="Model directory.")
     parser.add_argument("--output_dir", type=str, default='data/output/trassembler_h5', help="Output directory.")
     parser.add_argument("--text_emb_retrieval", action='store_true', help="Use text embedding retrieval.")
     parser.add_argument("--data_root", type=str, default='data', help="Data root directory.")
+    parser.add_argument("--skip_processed", action='store_true', help="Skip processed objects.")
+    parser.add_argument("--save_intermediate", action='store_true', help="Save intermediate step outputs (h5, obj, png) per timestep under out_dir/data_id/intermediate.")
     
     args = parser.parse_args()
-    ckpt_path = Path(f'{args.logdir}/checkpoints/last.ckpt')
-    config = OmegaConf.load(os.path.join(args.logdir, '.hydra/config.yaml'))
+    save_intermediate = args.save_intermediate
+    skip_processed = args.skip_processed
+    ckpt_path = Path(f'{args.model_dir}/checkpoints/last.ckpt')
+    config = OmegaConf.load(os.path.join(args.model_dir, '.hydra/config.yaml'))
     model = GMFlowModel.load_from_checkpoint(ckpt_path,
                                                    args=config, embed_dim=config.network.embed_dim, num_heads=config.network.num_heads, dropout=config.network.dropout,
                                   bias=True, scaling_factor=1., args_range=np.array([-1., 1.])).cuda().eval()
@@ -277,6 +374,8 @@ def main():
     image_transform = Compose(
         [ToTensor(), Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])]
     )
+    
+    args.output_dir = os.path.join(args.output_dir, config.category)
 
 
     clip_model, preprocess = clip.load("ViT-B/32", device='cuda')
@@ -303,9 +402,14 @@ def main():
     cnt = 0
     for data_id in tqdm(test_ids):
 
+        # Prepare per-object output directory
+        obj_out_dir = out_dir / f'{data_id}'
+        obj_out_dir.mkdir(exist_ok=True, parents=True)
+
         # if already processed, skip
-        if os.path.exists(str(out_dir / f'{data_id}.obj')):
-            obj_path = str(out_dir / f'{data_id}.obj')
+        final_obj_path = obj_out_dir / 'final.obj'
+        if os.path.exists(str(final_obj_path)) and skip_processed:
+            obj_path = str(final_obj_path)
             occs.append(1.)
 
             gt_mesh_path = f'{gt_data_root}/{data_id}/raw.obj'
@@ -332,6 +436,7 @@ def main():
         image_path = f'data/blender_renderings/{data_id}.png'
         image = cv2.imread(image_path)[..., ::-1].copy()
         image = image_transform(image)
+        rgb_gt = cv2.imread(image_path)[..., ::-1].copy()
 
         sample = create_sample(h5, part_names, data_id, image, do_retrieval, name_embeddings_db, clip_model)
         gt_sample = create_sample(gt_h5, gt_part_names, data_id, image, do_retrieval, name_embeddings_db, clip_model)
@@ -354,7 +459,20 @@ def main():
             gt_arc_arg = None
 
         try:
-            pred_args = model.sample(batch, step_callback=partial(symmetry_opt, cmd=batch['command'], cmd_mask=batch['command_mask'], gt_arc_arg=gt_arc_arg, args_mask=batch['args_mask'], model=model))
+            step_cb = partial(
+                step_callback,
+                cmd=batch['command'],
+                cmd_mask=batch['command_mask'],
+                args_mask=batch['args_mask'],
+                gt_arc_arg=gt_arc_arg,
+                model=model,
+                save_intermediate=save_intermediate,
+                output_subdir=obj_out_dir,
+                part_names=part_names,
+                base_args=batch['args'][0].clone().detach(),
+                rgb_gt=rgb_gt,
+            )
+            pred_args = model.sample(batch, step_callback=step_cb)
         except Exception as e:
             print(f"Error during sampling: {e}")
             occs.append(0.)
@@ -365,7 +483,7 @@ def main():
         # Assuming batch size is always 1 for evaluation
         i = 0 # Since batch size is 1
         data_id = batch['data_id'][i] # Use the actual data_id from the batch
-        rgb_gt = cv2.imread(image_path)[..., ::-1].copy()
+        # rgb_gt already loaded above
 
         cad_vec = []
         cmd = batch['command'][i]  # [P, L]
@@ -395,7 +513,7 @@ def main():
         try:
             full_shape = vec2CADsolid(cad_vec, is_numerical=False)
             # save obj
-            obj_path = str(out_dir / f'{data_id}.obj')
+            obj_path = str(final_obj_path)
             cad_to_obj(full_shape, obj_path)
             rgb_pred = render_nvdiffrast_rgb(obj_path)
             # vis.image(np.moveaxis(rgb, -1, 0), win='val', opts={'title': 'val'})
@@ -415,10 +533,10 @@ def main():
             continue
         rgb = np.concatenate([rgb_gt, rgb_pred], axis=1)
 
-        cv2.imwrite(str(out_dir / f'{data_id}.png'), rgb[..., ::-1])
+        cv2.imwrite(str(obj_out_dir / 'final.png'), rgb[..., ::-1])
 
         # save h5 and the obj
-        with h5py.File(str(out_dir / f'{data_id}.h5'), 'w') as h5_out: # Renamed handle
+        with h5py.File(str(obj_out_dir / 'final.h5'), 'w') as h5_out: # Renamed handle
             h5_out.create_dataset('vec', data=cad_vec)
             for part_name in part_cad_vec_out.keys():
                 h5_out.create_dataset(part_name, data=part_cad_vec_out[part_name], dtype=float)

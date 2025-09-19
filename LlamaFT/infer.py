@@ -524,7 +524,7 @@ def main():
     
     prompt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'prompt.txt')
     if args.adapter_path is None:
-        adapter_search_dir = os.path.join(project_dir, 'data', 'output', 'llamaft', args.category)
+        adapter_search_dir = os.path.join(project_dir, 'data', 'ckpts', 'llamaft', args.category)
         adapter_checkpoints = glob(os.path.join(adapter_search_dir, 'checkpoint-*'))
         if adapter_checkpoints:
             args.adapter_path = sorted(adapter_checkpoints, key=lambda x: int(x.split('checkpoint-')[-1]))[-1]
