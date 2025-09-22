@@ -1,6 +1,7 @@
 # (SIGGRAPH Asia 2025) Img2CAD: Reverse Engineering 3D CAD Models from Images
 
 [![arXiv](https://img.shields.io/badge/arXiv-2408.01437-b31b1b.svg)](https://arxiv.org/abs/2408.01437)
+[![Project Page](https://img.shields.io/website?url=https%3A%2F%2Fqq456cvb.github.io%2Fprojects%2Fimg2cad&label=Project%20Page)](https://qq456cvb.github.io/projects/img2cad)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -253,7 +254,7 @@ If you find this work useful, please cite our paper:
 ```bibtex
 @article{you2024img2cad,
   title={Img2CAD: Reverse Engineering 3D CAD Models from Images through VLM-Assisted Conditional Factorization},
-  author={You, Yang and Uy, Mikaela Angelina and Han, Jiaqi and Thomas, Rahul and Zhang, Haotong and You, Suya and Guibas, Leonidas},
+  author={You, Yang and Uy, Mikaela Angelina and Han, Jiaqi and Thomas, Rahul and Zhang, Haotong and Du, Yi and Chen, Hansheng and Engelmann, Francis and You, Suya and Guibas, Leonidas},
   journal={arXiv preprint arXiv:2408.01437},
   year={2024}
 }
@@ -276,5 +277,5 @@ For questions or issues, please:
 ## 🔗 Links
 
 - [Paper (arXiv)](https://arxiv.org/abs/2408.01437)
-- [Project Page](https://img2cad.github.io) (Coming Soon)
+- [Project Page](https://qq456cvb.github.io/projects/img2cad)
 - [Dataset](https://drive.google.com/drive/folders/1HZYa5SF5Wt4f3iq6zNFaCXHUeKuF2p-D?usp=sharing)
