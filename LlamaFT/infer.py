@@ -558,7 +558,6 @@ def main():
         total_ids = len(obj_ids)
         obj_ids = obj_ids[:args.max_samples]
         print(f"Processing first {len(obj_ids)} samples out of {total_ids} total")
-    obj_ids = ['2212']
     
     image_list = []
     for img_id in obj_ids:
