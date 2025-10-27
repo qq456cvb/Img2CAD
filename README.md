@@ -154,6 +154,8 @@ data/
     ├── table_pkl/
     └── storagefurniture_pkl/
 ```
+The **raw annotated `.h5` files** store the CAD command data for each object. The keys in each file correspond to the **part names** (e.g., `"leg"`, `"top"`, etc.), and if an object has only one part, the model still works seamlessly by feeding that single part into TrAssembler. Keys ending with `_bbox` represent the **3D bounding box** of the corresponding part. The values are **CAD parameters** following the DeepCAD convention: a 2D array where each row encodes a drawing command, such as `L, x1, y1, x2, y2`, representing a line between two points.
+
 
 ## 🎯 Usage
 
