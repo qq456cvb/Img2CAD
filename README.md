@@ -273,6 +273,15 @@ Key configuration options:
 category: chair  # chair, table, storagefurniture
 batch_size: 8
 
+<!-- README refined by Cursor -->
+
+## Data and Artifact Mirrors
+
+No verified Hugging Face mirror is available yet for the artifacts below; use the original sources until a complete mirror is uploaded.
+
+Original, external, or pending sources:
+- Google Drive mirror: [https://drive.google.com/drive/folders/1HZYa5SF5Wt4f3iq6zNFaCXHUeKuF2p-D?usp=sharing](https://drive.google.com/drive/folders/1HZYa5SF5Wt4f3iq6zNFaCXHUeKuF2p-D?usp=sharing). already mirrored on Hugging Face model and dataset repos
+
 # Training
 max_epochs: 300
 lr: 3e-4
