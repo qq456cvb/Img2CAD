@@ -1,5 +1,6 @@
 # (SIGGRAPH Asia 2025) Img2CAD: Reverse Engineering 3D CAD Models from Images
 
+[![Paper](https://img.shields.io/badge/Paper-SIGGRAPH%20Asia%202025-orange)](https://doi.org/10.1145/3757377.3763891)
 [![arXiv](https://img.shields.io/badge/arXiv-2408.01437-b31b1b.svg)](https://arxiv.org/abs/2408.01437)
 [![Project Page](https://img.shields.io/website?url=https%3A%2F%2Fqq456cvb.github.io%2Fprojects%2Fimg2cad&label=Project%20Page)](https://qq456cvb.github.io/projects/img2cad)
 [![Hugging Face Models](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-yellow)](https://huggingface.co/qq456cvb/img2cad)
@@ -108,11 +109,11 @@ Download pretrained model checkpoints from Hugging Face:
 
 ```bash
 # Download all models
-huggingface-cli download qq456cvb/img2cad --local-dir data/ckpts/hf
+hf download qq456cvb/img2cad --local-dir data/ckpts/hf
 
 # Or download specific models
-huggingface-cli download qq456cvb/img2cad --include "llamaft/chair/*" --local-dir data/ckpts/hf
-huggingface-cli download qq456cvb/img2cad --include "trassembler/chair/*" --local-dir data/ckpts/hf
+hf download qq456cvb/img2cad --include "llamaft/chair/*" --local-dir data/ckpts/hf
+hf download qq456cvb/img2cad --include "trassembler/chair/*" --local-dir data/ckpts/hf
 ```
 
 Available checkpoints:
@@ -137,11 +138,11 @@ Available checkpoints:
 pip install huggingface_hub
 
 # Download the entire dataset
-huggingface-cli download qq456cvb/img2cad-dataset --repo-type dataset --local-dir data
+hf download qq456cvb/img2cad-dataset --repo-type dataset --local-dir data
 
 # Or download specific directories
-huggingface-cli download qq456cvb/img2cad-dataset --repo-type dataset --include "raw_annotated/*" --local-dir data
-huggingface-cli download qq456cvb/img2cad-dataset --repo-type dataset --include "blender_renderings/*" --local-dir data
+hf download qq456cvb/img2cad-dataset --repo-type dataset --include "raw_annotated/*" --local-dir data
+hf download qq456cvb/img2cad-dataset --repo-type dataset --include "blender_renderings/*" --local-dir data
 ```
 
 #### Option 2: Download from Google Drive
@@ -273,15 +274,6 @@ Key configuration options:
 category: chair  # chair, table, storagefurniture
 batch_size: 8
 
-<!-- README refined by Cursor -->
-
-## Data and Artifact Mirrors
-
-No verified Hugging Face mirror is available yet for the artifacts below; use the original sources until a complete mirror is uploaded.
-
-Original, external, or pending sources:
-- Google Drive mirror: [https://drive.google.com/drive/folders/1HZYa5SF5Wt4f3iq6zNFaCXHUeKuF2p-D?usp=sharing](https://drive.google.com/drive/folders/1HZYa5SF5Wt4f3iq6zNFaCXHUeKuF2p-D?usp=sharing). already mirrored on Hugging Face model and dataset repos
-
 # Training
 max_epochs: 300
 lr: 3e-4
@@ -333,11 +325,12 @@ If you find this work useful, please cite our paper:
 
 ```bibtex
 @inproceedings{you2025img2cad,
-  title={Img2cad: Reverse engineering 3d cad models from images through vlm-assisted conditional factorization},
+  title={Img2CAD: Reverse Engineering 3D CAD Models from Images through VLM-Assisted Conditional Factorization},
   author={You, Yang and Uy, Mikaela Angelina and Han, Jiaqi and Thomas, Rahul and Zhang, Haotong and Du, Yi and Chen, Hansheng and Engelmann, Francis and You, Suya and Guibas, Leonidas},
   booktitle={Proceedings of the SIGGRAPH Asia 2025 Conference Papers},
   pages={1--12},
-  year={2025}
+  year={2025},
+  doi={10.1145/3757377.3763891}
 }
 ```
 
